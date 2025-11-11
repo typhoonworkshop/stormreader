@@ -1,0 +1,47 @@
+:root {
+  --border-mask: 1vw;
+  --mask: calc(var(--border-mask) * 2); 
+  --display-width: 80vw;
+  --display-height: 38vw;
+  --fontsize: 3vw;
+}
+code {
+  white-space: pre;
+  font-size: smaller;
+}
+span {
+  display: inline-block;
+  white-space: pre;
+  transition: color 2s ease-in-out;
+  -o-transition: color 2s ease-in-out;
+  -ms-transition: color 2s ease-in-out;
+  -moz-transition: color 2s ease-in-out;
+  -webkit-transition: color 2s ease-in-out;
+}
+span.red {
+  color: #ff4136;
+}
+#container {
+  position: relative;
+  font-size: var(--fontsize);
+  width: var(--display-width);
+  height: var(--display-height);
+  border: none; /* 1px solid black; */
+  overflow: hidden;
+}
+.scroller {
+  margin: none;
+  line-height: calc(var(--fontsize) * 1.8);
+  width: var(--display-width);
+  overflow: hidden;
+  white-space: nowrap;
+}
+#mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(var(--display-width) - var(--mask) + 1px);
+  height: calc(var(--display-height) - var(--mask));
+  background-color: rgba(255,255,255,0);
+  border: var(--border-mask) solid rgba(255, 255, 240, 1);
+}

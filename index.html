@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en"> 
+<head>
+  <meta charset="utf-8" />
+	<title>The code is saying[.js]</title>
+	<link rel='stylesheet' href='/style.css' type='text/css' media='all' />
+	<link rel='stylesheet' href='./style.css' type='text/css' media='all' />
+</head>
+  <body>
+    <!-- <input type="file" id="fileInput"> -->
+    <div>&nbsp;</div>
+    <hr>
+    <!-- DISPLAY HTML -->
+    <div id="container">
+      <div id="scroll0" class="scroller"></div>
+      <div id="scroll1" class="scroller"></div>
+      <div id="scroll2" class="scroller"></div>
+      <div id="scroll3" class="scroller"></div>
+      <div id="scroll4" class="scroller"></div>
+      <div id="scroll5" class="scroller"></div>
+      <div id="scroll6" class="scroller"></div>
+      <div id="mask"></div>
+    </div>
+    <hr>
+    <div>&nbsp;<br>&nbsp;<br>&nbsp;<br>&nbsp;</div>
+    <h3 class="italic">The code is saying[.js]</h3>
+    <p>This is a dynamic version (which may be further developed) of a piece first published in <a href="https://badquar.to/publications/run_run_run.html" target="_blank"><cite>Run Run Run</cite></a> (ed. Nick Montfort, New York: Bad Quarto, 2025, p. 8). It loads its minimal text-generating code as its own supply text. In the <code>node.js</code> version, the JavaScript file itself is loaded locally. At the moment, this version uses a copy of text for the two generating functions of the code module, as displayed here:</p>
+    <p class="italic right">John Cayley, July 2025</p>
+
+    <code id="saying-code">
+    function saying (whatIAmGenerating) {
+      const recognitions=[["="," being "],["RegExp","regular expression"],["replace",
+      "memory"],["[^\\w]"," "],["([A-Z])"," $1"],["const ","constantly "],["function",
+      "saying"],["match","archive"],["aeiou","breathing"],["split","language"],["floor",
+      "ground"],["length","extension"],["case","sayable"],["set","horizon"],["Timeout",
+      "ceasing"],[" +"," "]]
+      const moving=(qualities,here,there)=> qualities=qualities.replace(new RegExp(here,"g"),there)
+      function continualMovement(theLifeWorldReading,recognitions) {
+        for(const reading of recognitions) {
+          theLifeWorldReading=moving(theLifeWorldReading,reading[0],reading[1])}
+        return theLifeWorldReading}
+      function expressing (imagining) {
+        let writing = []
+        for (const images of imagining) {
+          if (images.match(/[aeiou]/)) writing.push(images)}
+        return writing}
+      whatIAmGenerating=continualMovement(whatIAmGenerating,recognitions)
+      whatIAmGenerating=expressing(whatIAmGenerating.split(" "))
+      return whatIAmGenerating}
+    function thinkingOfWords (lastWord, nothing, whatIAmGenerating) {
+      return new Promise((resolve) => {
+        function overAndOver() {
+          let thoughts = whatIAmGenerating[Math.floor(Math.random() * 
+            whatIAmGenerating.length)].toLowerCase();
+          if (thoughts !== lastWord) {
+            resolve([enclosing(thoughts), thoughts]);
+          } else {
+            setTimeout(overAndOver, 0);}}
+        overAndOver();});}
+    </code>
+    <div>&nbsp;<br>&nbsp;</div>
+    <p>To experiment with an entirely standalone <code>node.js</code> version (that represents a slight revision of the piece in <cite>Run Run Run</cite>) just copy and paste the code <cite>below</cite> into a file that must be named ‘saying.js’ (because it loads itself as supply text). With <code>node.js</code> installed on your system, open a terminal, navigate to the folder with the saying.js file, then run with:<br>
+    <code>     > node saying.js</code><br>
+    Each execution will generate a number of words proportionate to the length of the preprocessed code.</p>
+
+    <code>
+    const theSayable=require('fs')
+    let whatIAmGenerating=theSayable.readFileSync("saying.js",'utf-8')
+    let thinking=0,movements="",dwelling=""
+    const recognitions=[["="," being "],["RegExp",
+    "regular expression"],["stdout","saying"],["replace",
+    "replacing"],["write","writing"],["[^\\w]"," "],
+    ["([A-Z])"," $1"],["const ","constantly "],["fs","memory"
+    ],["File","archive"],["aeiou","vowels"],["utf","language"],
+    ["floor","ground"],["length","extension"],[" +"," "]]
+    const moving=(qualities,here,there)=>
+    qualities=qualities.replace(new RegExp(here,"g"),there)
+    function continualMovement(theLifeWorldReading,recognitions){
+     for(const reading of recognitions){
+      theLifeWorldReading=moving(theLifeWorldReading,reading[0],reading[1])}
+     return theLifeWorldReading}
+    function expressing(imagining){
+     let writing=[]
+     for(const images of imagining){
+      if(images.match(/[aeiou]/))writing.push(images)}
+     return writing}
+    whatIAmGenerating=continualMovement(whatIAmGenerating,recognitions)
+    whatIAmGenerating=expressing(whatIAmGenerating.split(" "))
+    let horizon=whatIAmGenerating.length
+    while(thinking++ &lt;horizon){
+     do{movements=whatIAmGenerating[Math.floor(Math.random()*horizon)]}
+     while(dwelling==movements)
+     dwelling=movements
+     process.stdout.write(movements+" ")}
+    </code>
+    <div>&nbsp;<br>&nbsp;</div>
+    <hr>
+    <!-- SCRIPT -->
+    <script type="module">
+      // CONFIG
+      import {saying, scrollFirstWord, getHead, thinkingOfWords, longTail} from "./saying.js";
+      const numOfLines = 7, wordsPerLine = 11;
+      // LOAD THE GENERATOR
+      let theCode = document.getElementById("saying-code").innerText;
+      var whatIAmGenerating = saying(document.getElementById("saying-code").innerText);
+      main(whatIAmGenerating);
+      // MAIN FUNCTION
+      async function main(whatIAmGenerating) {
+        console.log("Main function started");
+        // populate the scroll elements with words
+        let prevWord = "";
+        for (let i = 0; i < numOfLines; i++) {
+          let elem = document.getElementById("scroll" + i);
+          let html = "";
+          let spanned = "";
+          for (let j = 0; j < wordsPerLine; j++) {
+            [spanned, prevWord] = await thinkingOfWords(prevWord, i, whatIAmGenerating);
+            html += spanned;
+          }
+          elem.innerHTML = html + longTail;
+        }
+        // Start scrolling
+        for (let i = numOfLines - 1; i > -1; i--) {
+          if (i === numOfLines - 1) {
+            scrollFirstWord(document.getElementById("scroll" + i), thinkingOfWords, prevWord, i, whatIAmGenerating, 1250);
+          } else {
+            scrollFirstWord(document.getElementById("scroll" + i), getHead, prevWord, i, [], 1250);
+          }
+        }
+      }
+    </script>
+  </body>
+</html>
