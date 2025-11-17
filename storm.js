@@ -16,8 +16,10 @@ function thinkingOfWords (lastWord, lineNum, wordIndex, whatIAmGenerating) {
 function enclosing (thoughts) {
   return `<span>${thoughts} </span>`;
 }
+
 const longTail = "<span>" + "&nbsp;".repeat(100) + "</span>";
-async function scrollFirstWord(scrollContainer, wordSourceFunction, prevWord = "", lineNum, whatIAmGenerating, wordIndex, duration = 1250) { // 1250 for WORD
+
+async function scrollFirstWord(scrollContainer, wordSourceFunction, prevWord = "", lineNum, whatIAmGenerating, wordIndex, duration = 1250) { // default: per word
   let spanned = "";
   const spanRegex = /^<span[^>]*>(.*?)<\/span>/;
   while (true) {

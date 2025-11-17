@@ -68,13 +68,14 @@
         }
         let prevWord = word;
         // Start scrolling
+        let perWordScrollingDuration = 900; // milliseconds
         for (let i = numOfLines - 1; i > -1; i--) {
           if (i === numOfLines - 1) {
             // last line so get the next word from the text
-            scrollFirstWord(document.getElementById("scroll" + i), thinkingOfWords, prevWord, i, whatIAmGenerating, wordIndex, 1250);
+            scrollFirstWord(document.getElementById("scroll" + i), thinkingOfWords, prevWord, i, whatIAmGenerating, wordIndex, perWordScrollingDuration);
           } else {
             // other lines get their next word from the line below
-            scrollFirstWord(document.getElementById("scroll" + i), getHead, prevWord, i, [], wordIndex, 1250);
+            scrollFirstWord(document.getElementById("scroll" + i), getHead, prevWord, i, [], wordIndex, perWordScrollingDuration);
           }
         }
       }
