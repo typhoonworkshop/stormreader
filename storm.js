@@ -1,47 +1,23 @@
-function saying (whatIAmGenerating) {
-  const recognitions=[["="," being "],["RegExp","regular expression"],["replace","memory"],["[^\\w]"," "],["([A-Z])"," $1"],["const ","constantly "],["function","saying"],["match","archive"],["aeiou","breathing"],["split","language"],["floor","ground"],["length","extension"],["case","sayable"],["set","horizon"],["Timeout","ceasing"],[" +"," "]]
-  const moving=(qualities,here,there)=> qualities=qualities.replace(new RegExp(here,"g"),there)
-  function continualMovement(theLifeWorldReading,recognitions) {
-    for(const reading of recognitions) {
-      theLifeWorldReading=moving(theLifeWorldReading,reading[0],reading[1])
-    }
-    return theLifeWorldReading
-  }
-  function expressing (imagining) {
-    let writing = []
-    for (const images of imagining) {
-      if (images.match(/[aeiou]/)) writing.push(images)
-    }
-    return writing
-  }
-  whatIAmGenerating=continualMovement(whatIAmGenerating,recognitions)
-  whatIAmGenerating=expressing(whatIAmGenerating.split(" "))
-  return whatIAmGenerating
-}
-function thinkingOfWords (lastWord, nothing, whatIAmGenerating) {
+function thinkingOfWords (lastWord, lineNum, wordIndex, whatIAmGenerating) {
   return new Promise((resolve) => {
-    function overAndOver() {
-      let thoughts = whatIAmGenerating[Math.floor(Math.random() * whatIAmGenerating.length)].toLowerCase();
-      if (thoughts !== lastWord) {
-        resolve([enclosing(thoughts), thoughts]);
-      } else {
-        setTimeout(overAndOver, 0);
-      }
+    // function overAndOver() {
+      let thoughts = whatIAmGenerating[wordIndex];
+      wordIndex = (wordIndex + 1) % whatIAmGenerating.length;
+      // if (thoughts !== lastWord) {
+      resolve([enclosing(thoughts), thoughts, wordIndex]);
+      // } else {
+      //   setTimeout(overAndOver, 0);
+      // }
     }
-    overAndOver();
-  });
+    // overAndOver();
+  );
 }
-// considered as far as here
+
 function enclosing (thoughts) {
-  // let spanned = "";
-  // for (let i = 0; i < thoughts.length; i++) {
-  //   spanned += `<span>${thoughts[i]}</span>`;
-  // }
-  // return spanned + `<span> </span>`;
   return `<span>${thoughts} </span>`;
 }
 const longTail = "<span>" + "&nbsp;".repeat(100) + "</span>";
-async function scrollFirstWord(scrollContainer, wordSource, prevWord = "", lineNum, whatIAmGenerating, duration = 1250) { // 1250 for WORD
+async function scrollFirstWord(scrollContainer, wordSourceFunction, prevWord = "", lineNum, whatIAmGenerating, wordIndex, duration = 1250) { // 1250 for WORD
   let spanned = "";
   const spanRegex = /^<span[^>]*>(.*?)<\/span>/;
   while (true) {
@@ -50,20 +26,31 @@ async function scrollFirstWord(scrollContainer, wordSource, prevWord = "", lineN
     const stepCount = Math.max(1, Math.floor(amountToScroll));
     const stepSize = amountToScroll / stepCount;
     const stepTime = duration / stepCount;
-    let currentStep = 0;
+    // Smooth scroll using requestAnimationFrame + easing for consistent motion
     scrollContainer.scrollLeft = 0;
+    const easeInOutQuad = (t) => (t < 0.5) ? (2 * t * t) : (-1 + (4 - 2 * t) * t);
     await new Promise((resolve) => {
-      function smoothScroll() {
-        if (currentStep >= stepCount) {
-          resolve();
+      const startTime = performance.now();
+      const from = 0;
+      const to = amountToScroll;
+
+      function frame(now) {
+        const elapsed = now - startTime;
+        const t = Math.min(1, elapsed / duration);
+        const eased = easeInOutQuad(t);
+        scrollContainer.scrollLeft = from + (to - from) * eased;
+        colorSpansByOffset(scrollContainer);
+        if (t < 1) {
+          requestAnimationFrame(frame);
         } else {
-          scrollContainer.scrollLeft += stepSize;
+          // ensure final position
+          scrollContainer.scrollLeft = to;
           colorSpansByOffset(scrollContainer);
-          currentStep++;
-          setTimeout(smoothScroll, stepTime);
+          resolve();
         }
       }
-      smoothScroll();
+
+      requestAnimationFrame(frame);
     });
     let inner = scrollContainer.innerHTML;
     let head = inner.match(spanRegex);
@@ -71,13 +58,15 @@ async function scrollFirstWord(scrollContainer, wordSource, prevWord = "", lineN
     let children = scrollContainer.children;
     let tail = children[children.length - 2];
     prevWord = tail.innerHTML.trim();
-    [spanned, prevWord] = await wordSource(prevWord, lineNum, whatIAmGenerating);
+    // wordSourceFunction is either getHead or thinkingOfWords
+    [spanned, prevWord, wordIndex] = await wordSourceFunction(prevWord, lineNum, wordIndex, whatIAmGenerating);
     scrollContainer.innerHTML = decapitated + spanned + longTail;
     scrollContainer.scrollLeft = 0;
     // scrollContainer.scrollLeft += stepSize; // extra step for slight easing NEEDED?
   }
 }
-function getHead(prevWord, lineNum) {
+
+function getHead(prevWord, lineNum, wordIndex) {
   const spanRegex = /^<span[^>]*>(.*?)<\/span>/;
   return new Promise((resolve, reject) => {
     let inner = document.getElementById("scroll" + (lineNum + 1)).innerHTML;
@@ -91,13 +80,19 @@ function getHead(prevWord, lineNum) {
     } else {
       // Try again after a short delay
       setTimeout(() => {
-        resolve(getHead(prevWord, lineNum));
+        resolve(getHead(prevWord, lineNum, wordIndex));
       }, 10);
     }
   });
 }
-function colorSpansByOffset(scrollDiv, leftRatio = 0.37, rightRatio = 0.85) {
-  if (scrollDiv.id != "scroll3") return;
+
+function colorSpansByOffset(scrollDiv, leftRatio = 0.33, rightRatio = 0.85, highlight="red") {
+  if (!["scroll2", "scroll3","scroll4"].includes(scrollDiv.id)) return;
+  if (["scroll2", "scroll4"].includes(scrollDiv.id)) {
+    leftRatio = 0.52;
+    rightRatio = 0.7;
+    highlight = "pink";
+  }
   const spans = scrollDiv.querySelectorAll("span");
   const containerWidth = scrollDiv.offsetWidth;
   const leftEdge = containerWidth * leftRatio;
@@ -105,10 +100,10 @@ function colorSpansByOffset(scrollDiv, leftRatio = 0.37, rightRatio = 0.85) {
   spans.forEach(span => {
     const offset = span.offsetLeft;
     if (offset > leftEdge && offset < rightEdge) {
-      span.classList.add("red");
+      span.classList.add(highlight);
     } else {
-      span.classList.remove("red");
+      span.classList.remove(highlight);
     }
   });
 }
-export {saying, scrollFirstWord, getHead, thinkingOfWords, longTail};
+export {scrollFirstWord, getHead, enclosing, thinkingOfWords, longTail};
