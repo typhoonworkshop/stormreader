@@ -22,15 +22,25 @@ const longTail = "<span>" + "&nbsp;".repeat(100) + "</span>";
 async function scrollFirstWord(scrollContainer, wordSourceFunction, prevWord = "", lineNum, whatIAmGenerating, wordIndex, duration = 1250) { // default: per word
   let spanned = "";
   const spanRegex = /^<span[^>]*>(.*?)<\/span>/;
+  const easeInOutQuad = (t) => (t < 0.5) ? (2 * t * t) : (-1 + (4 - 2 * t) * t);
+
   while (true) {
     const wordToScroll = scrollContainer.firstChild;
     const amountToScroll = wordToScroll.offsetWidth;
-    const stepCount = Math.max(1, Math.floor(amountToScroll));
-    const stepSize = amountToScroll / stepCount;
-    const stepTime = duration / stepCount;
-    // Smooth scroll using requestAnimationFrame + easing for consistent motion
+
+    // Start fetching the next word while current one scrolls (pipelined)
+    let nextWordPromise = (async () => {
+      let inner = scrollContainer.innerHTML;
+      let head = inner.match(spanRegex);
+      let decapitated = inner.replace(head[0], "").replace(longTail, "");
+      let children = scrollContainer.children;
+      let tail = children[children.length - 2];
+      prevWord = tail.innerHTML.trim();
+      return await wordSourceFunction(prevWord, lineNum, wordIndex, whatIAmGenerating);
+    })();
+
+    // Smooth scroll using requestAnimationFrame + easing
     scrollContainer.scrollLeft = 0;
-    const easeInOutQuad = (t) => (t < 0.5) ? (2 * t * t) : (-1 + (4 - 2 * t) * t);
     await new Promise((resolve) => {
       const startTime = performance.now();
       const from = 0;
@@ -45,7 +55,6 @@ async function scrollFirstWord(scrollContainer, wordSourceFunction, prevWord = "
         if (t < 1) {
           requestAnimationFrame(frame);
         } else {
-          // ensure final position
           scrollContainer.scrollLeft = to;
           colorSpansByOffset(scrollContainer);
           resolve();
@@ -54,17 +63,11 @@ async function scrollFirstWord(scrollContainer, wordSourceFunction, prevWord = "
 
       requestAnimationFrame(frame);
     });
-    let inner = scrollContainer.innerHTML;
-    let head = inner.match(spanRegex);
-    let decapitated = inner.replace(head[0], "").replace(longTail, "");
-    let children = scrollContainer.children;
-    let tail = children[children.length - 2];
-    prevWord = tail.innerHTML.trim();
-    // wordSourceFunction is either getHead or thinkingOfWords
-    [spanned, prevWord, wordIndex] = await wordSourceFunction(prevWord, lineNum, wordIndex, whatIAmGenerating);
-    scrollContainer.innerHTML = decapitated + spanned + longTail;
+
+    // Await the pre-fetched next word result
+    [spanned, prevWord, wordIndex] = await nextWordPromise;
+    scrollContainer.innerHTML = scrollContainer.innerHTML.replace(spanRegex, "").replace(longTail, "") + spanned + longTail;
     scrollContainer.scrollLeft = 0;
-    // scrollContainer.scrollLeft += stepSize; // extra step for slight easing NEEDED?
   }
 }
 
