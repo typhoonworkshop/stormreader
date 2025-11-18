@@ -24,7 +24,7 @@
     <script type="module">
       // CONFIG
       import {scrollFirstWord, spanify, getHeadWord, getNextSourceWord, longTail} from "./storm.js";
-      const numOfLines = 7, wordsPerLine = 14;
+      const numOfLines = 7, wordsPerLine = 14, perWordScrollingDuration = 1100; // millis: controls speed
       // LOAD THE TEXT
         // ==================================================
         // Downloaded on: 10/08/2025, 11:20:29 PM
@@ -71,7 +71,6 @@
         // return; // DEBUG
         let prevWord = word;
         // Start scrolling
-        let perWordScrollingDuration = 1100; // millis: controls speed
         for (let i = numOfLines - 1; i > -1; i--) {
           if (i === numOfLines - 1) {
             // last line so get the next word from the text
