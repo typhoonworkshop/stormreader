@@ -78,7 +78,7 @@ function getHead(prevWord, lineNum, wordIndex) {
       return;
     }
     if (spanned[1].trim() !== prevWord) {
-      resolve([spanned[0], prevWord], wordIndex);
+      resolve([spanned[0], prevWord, wordIndex]);
     } else {
       // Try again after a short delay
       setTimeout(() => {

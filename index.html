@@ -64,8 +64,10 @@
             html += enclosing(word);
             wordIndex = (wordIndex + 1) % numOfWords;
           }
+          // console.log(html); // DEBUG
           elem.innerHTML = html + longTail;
         }
+        // return; // DEBUG
         let prevWord = word;
         // Start scrolling
         let perWordScrollingDuration = 900; // milliseconds
