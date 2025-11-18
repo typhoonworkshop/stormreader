@@ -1,25 +1,6 @@
-function thinkingOfWords (lastWord, lineNum, wordIndex, whatIAmGenerating) {
-  return new Promise((resolve) => {
-    // function overAndOver() {
-      let thoughts = whatIAmGenerating[wordIndex];
-      wordIndex = (wordIndex + 1) % whatIAmGenerating.length;
-      // if (thoughts !== lastWord) {
-      resolve([enclosing(thoughts), thoughts, wordIndex]);
-      // } else {
-      //   setTimeout(overAndOver, 0);
-      // }
-    }
-    // overAndOver();
-  );
-}
-
-function enclosing (thoughts) {
-  return `<span>${thoughts} </span>`;
-}
-
 const longTail = "<span>" + "&nbsp;".repeat(100) + "</span>";
 
-async function scrollFirstWord(scrollContainer, wordSourceFunction, prevWord = "", lineNum, whatIAmGenerating, wordIndex, duration = 1250) { // default: per word
+async function scrollFirstWord(scrollContainer, wordSourceFunction, prevWord = "", lineNum, generatedText, wordIndex, duration = 1250) { // default: per word
   let spanned = "";
   const spanRegex = /^<span[^>]*>(.*?)<\/span>/;
   const easeInOutQuad = (t) => (t < 0.5) ? (2 * t * t) : (-1 + (4 - 2 * t) * t);
@@ -31,12 +12,12 @@ async function scrollFirstWord(scrollContainer, wordSourceFunction, prevWord = "
     // Start fetching the next word while current one scrolls (pipelined)
     let nextWordPromise = (async () => {
       let inner = scrollContainer.innerHTML;
-      let head = inner.match(spanRegex);
-      let decapitated = inner.replace(head[0], "").replace(longTail, "");
+      let headWord = inner.match(spanRegex);
+      let decapitated = inner.replace(headWord[0], "").replace(longTail, "");
       let children = scrollContainer.children;
-      let tail = children[children.length - 2];
-      prevWord = tail.innerHTML.trim();
-      return await wordSourceFunction(prevWord, lineNum, wordIndex, whatIAmGenerating);
+      let tailWord = children[children.length - 2];
+      prevWord = tailWord.innerHTML.trim();
+      return await wordSourceFunction(prevWord, lineNum, wordIndex, generatedText);
     })();
 
     // Smooth scroll using requestAnimationFrame + easing
@@ -71,7 +52,26 @@ async function scrollFirstWord(scrollContainer, wordSourceFunction, prevWord = "
   }
 }
 
-function getHead(prevWord, lineNum, wordIndex) {
+function getNextSourceWord (lastWord, lineNum, wordIndex, generatedText) {
+  return new Promise((resolve) => {
+    // function findNonRepeat () { // would avoid repeated words
+      let nextWord = generatedText[wordIndex];
+      wordIndex = (wordIndex + 1) % generatedText.length;
+      // if (nextWord !== lastWord) {
+      resolve([spanify(nextWord), nextWord, wordIndex]);
+      // } else {
+      //   setTimeout(findNonRepeat, 0);
+      // }
+    }
+    // findNonRepeat();
+  );
+}
+
+function spanify (word) {
+  return `<span>${word} </span>`;
+}
+
+function getHeadWord(prevWord, lineNum, wordIndex) {
   const spanRegex = /^<span[^>]*>(.*?)<\/span>/;
   return new Promise((resolve, reject) => {
     let inner = document.getElementById("scroll" + (lineNum + 1)).innerHTML;
@@ -85,7 +85,7 @@ function getHead(prevWord, lineNum, wordIndex) {
     } else {
       // Try again after a short delay
       setTimeout(() => {
-        resolve(getHead(prevWord, lineNum, wordIndex));
+        resolve(getHeadWord(prevWord, lineNum, wordIndex));
       }, 10);
     }
   });
@@ -111,4 +111,4 @@ function colorSpansByOffset(scrollDiv, leftRatio = 0.33, rightRatio = 0.85, high
     }
   });
 }
-export {scrollFirstWord, getHead, enclosing, thinkingOfWords, longTail};
+export {scrollFirstWord, getHeadWord, spanify, getNextSourceWord, longTail};

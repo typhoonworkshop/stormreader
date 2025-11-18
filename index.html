@@ -23,7 +23,7 @@
     <!-- SCRIPT -->
     <script type="module">
       // CONFIG
-      import {scrollFirstWord, enclosing, getHead, thinkingOfWords, longTail} from "./storm.js";
+      import {scrollFirstWord, spanify, getHeadWord, getNextSourceWord, longTail} from "./storm.js";
       const numOfLines = 7, wordsPerLine = 14;
       // LOAD THE TEXT
         // ==================================================
@@ -39,45 +39,46 @@
         // Context Strategy: context-halving
         // Context Window Size: 48552
         // FILE: chat_history_2025-10-08T23-20-29_deepseek_typhoon_tags_contexthalving.txt
-      let whatIAmGenerating = "";
+      let generatedText = "";
       
       fetch("./stormvoice.txt")
         .then(response => response.text())
         .then(text => {
-          whatIAmGenerating = text;
-          main(whatIAmGenerating);
+          generatedText = text;
+          main(generatedText);
         })
         .catch(error => console.error("Error loading stormvoice.txt:", error));
       // MAIN FUNCTION
       let word = "";
-      async function main(whatIAmGenerating) {
+      async function main(generatedText) {
         console.log("Main function started");
-        whatIAmGenerating = whatIAmGenerating.split(/\s+/);
-        let numOfWords = whatIAmGenerating.length;
+        generatedText = generatedText.split(/\s+/);
+        let numOfWords = generatedText.length;
         let wordIndex = Math.floor(Math.random() * numOfWords);
         // populate the scroll elements with words
         for (let i = 0; i < numOfLines; i++) {
           let elem = document.getElementById("scroll" + i);
           let html = "";
           for (let j = 0; j < wordsPerLine; j++) {
-            word = whatIAmGenerating[wordIndex];
-            html += enclosing(word);
+            word = generatedText[wordIndex];
+            html += spanify(word);
             wordIndex = (wordIndex + 1) % numOfWords;
           }
           // console.log(html); // DEBUG
+          // add the long tail to allow smoother scrolling
           elem.innerHTML = html + longTail;
         }
         // return; // DEBUG
         let prevWord = word;
         // Start scrolling
-        let perWordScrollingDuration = 1100; // milliseconds
+        let perWordScrollingDuration = 1100; // millis: controls speed
         for (let i = numOfLines - 1; i > -1; i--) {
           if (i === numOfLines - 1) {
             // last line so get the next word from the text
-            scrollFirstWord(document.getElementById("scroll" + i), thinkingOfWords, prevWord, i, whatIAmGenerating, wordIndex, perWordScrollingDuration);
+            scrollFirstWord(document.getElementById("scroll" + i), getNextSourceWord, prevWord, i, generatedText, wordIndex, perWordScrollingDuration);
           } else {
             // other lines get their next word from the line below
-            scrollFirstWord(document.getElementById("scroll" + i), getHead, prevWord, i, [], wordIndex, perWordScrollingDuration);
+            scrollFirstWord(document.getElementById("scroll" + i), getHeadWord, prevWord, i, [], wordIndex, perWordScrollingDuration);
           }
         }
       }
