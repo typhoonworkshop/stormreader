@@ -9,6 +9,6 @@ Hello all. I started this copied from https://programmatology.com/apps/saying an
 
 ### ToDos
 - [ scrolling from the middle of a container using scroll-snap did not go well ]
-- [ translating a div containing text also produced problematice behavior ...]
+- [ translating a div containing text also produced problematic behavior ...]
 - ... so John's now moving boxes with words in them and although this sounds worse, it's better
 - addlines top and bottom with scaling to produce a fisheye effect but only on the y-axis
