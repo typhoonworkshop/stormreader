@@ -71,68 +71,70 @@ function addNewScrollItem(charIndex, scroller) {
 
   // Force reflow to get accurate width
   scroller.offsetHeight;
-  charIndex = (charIndex + 1) % config.numOfChars;
 
-  // console.log(`Added new char: "${config.generatedText[(charIndex - 1 + config.numOfChars) % config.numOfChars]}" at position ${rightmostPosition}px`);
+  charIndex = (charIndex + 1) % config.numOfChars;
 
   return charIndex;
 }
 
-function animator(charIndex, scroller, scrollerIndex) {
+function updateScroller(scroller, charIndex, distance) {
+  // Update position of each scroll item
+  const itemsToRemove = [];
+  const scrollItems = Array.from(scroller.children);
+
+  scrollItems.forEach((item, index) => {
+    const currentLeft = parseFloat(item.style.left);
+    const newLeft = currentLeft - distance; // Move left by distance
+    item.style.left = `${newLeft}px`;
+
+    // Check if item is completely off the left edge
+    if (newLeft + item.offsetWidth < 0) {
+      itemsToRemove.push(item);
+    }
+  });
+
+  // Remove items that are off screen and add new ones
+  itemsToRemove.forEach(item => {
+    item.remove();
+    // Add a new item to maintain continuous flow
+    charIndex = addNewScrollItem(charIndex, scroller);
+  });
+
+  // Apply color highlighting
+  colorSpansByOffset(scroller);
+  
+  return charIndex;
+}
+
+function startAllAnimations(charIndexes, scrollers) {
+  config.isAnimating = true;
   let lastTime = performance.now();
 
-  function animate(currentTime) {
+  function animateAll(currentTime) {
     const deltaTime = currentTime - lastTime;
-    const distance = (deltaTime / 1000) * 150 // speedSlider; // Pixels to move this frame
+    const distance = (deltaTime / 1000) * config.scrollSpeed;
     lastTime = currentTime;
 
-    // Update position of each scroll item
-    const itemsToRemove = [];
-    const scrollItems = Array.from(scroller.children);
-
-    scrollItems.forEach((item, index) => {
-      const currentLeft = parseFloat(item.style.left);
-      const newLeft = currentLeft - distance; // Move left by distance
-      item.style.left = `${newLeft}px`;
-
-      // Check if item is completely off the left edge
-      if (newLeft + item.offsetWidth < 0) {
-        itemsToRemove.push(item);
-      }
+    // Update ALL scrollers in this single frame
+    scrollers.forEach((scroller, i) => {
+      charIndexes[i] = updateScroller(scroller, charIndexes[i], distance);
     });
-
-    // Remove items that are off screen and add new ones
-    itemsToRemove.forEach(item => {
-      item.remove();
-      // Add a new item to maintain continuous flow
-      charIndex = addNewScrollItem(charIndex, scroller);
-    });
-
-    // Apply color highlighting
-    colorSpansByOffset(scroller);
 
     // Continue animation
     if (config.isAnimating) {
-      config.animationFrames[scrollerIndex] = requestAnimationFrame(animate);
+      config.animationFrames[0] = requestAnimationFrame(animateAll);
     }
   }
 
-  config.animationFrames[scrollerIndex] = requestAnimationFrame(animate);
-}
-
-function startAnimation(charIndex, scroller, scrollerIndex) {
-  config.isAnimating = true;
-  animator(charIndex, scroller, scrollerIndex);
+  config.animationFrames[0] = requestAnimationFrame(animateAll);
 }
 
 function stopAnimation() {
   config.isAnimating = false;
-  config.animationFrames.forEach((frameId, index) => {
-    if (frameId !== null) {
-      cancelAnimationFrame(frameId);
-      config.animationFrames[index] = null;
-    }
-  });
+  if (config.animationFrames[0] !== null) {
+    cancelAnimationFrame(config.animationFrames[0]);
+    config.animationFrames[0] = null;
+  }
 }
 
 // older functions
@@ -223,17 +225,21 @@ function getHeadWord(prevWord, lineNum, wordIndex) {
   });
 }
 
-function colorSpansByOffset(scrollDiv, leftRatio = 0.33, rightRatio = 0.85, highlight="red") {
+function colorSpansByOffset(scrollDiv, leftRatio = 0.4, rightRatio = 0.85, highlight="red") {
+  // Early return before any DOM queries
   if (!["scroll2", "scroll3","scroll4"].includes(scrollDiv.id)) return;
+  
   if (["scroll2", "scroll4"].includes(scrollDiv.id)) {
     leftRatio = 0.52;
     rightRatio = 0.7;
     highlight = "pink";
   }
+  
   const spans = scrollDiv.querySelectorAll("span");
   const containerWidth = scrollDiv.offsetWidth;
   const leftEdge = containerWidth * leftRatio;
   const rightEdge = containerWidth * rightRatio;
+  
   spans.forEach(span => {
     const offset = span.offsetLeft;
     if (offset > leftEdge && offset < rightEdge) {
@@ -245,4 +251,4 @@ function colorSpansByOffset(scrollDiv, leftRatio = 0.33, rightRatio = 0.85, high
 }
 const longTail = "<span>" + "&nbsp;".repeat(100) + "</span>";
 // export all functions and config
-export {config, createContent, startAnimation};
+export {config, createContent, startAllAnimations};

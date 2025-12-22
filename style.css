@@ -16,14 +16,12 @@ body {
   padding: 0;
   border: none;
   background-color: black;
-  color: floralwhite;
+  color: grey;
 }
-
 code {
   white-space: pre;
   font-size: smaller;
 }
-
 span {
   display: inline-block;
   white-space: pre;
@@ -34,13 +32,24 @@ span {
   -webkit-transition: color 2s ease-in-out;
 }
 span.red {
-  color: #ff4136;
+  /* color: #ff4136; */
+  color: white;
+  /* text-shadow: 0 -0.3ch 0.5ch white,
+    0 0.3ch 0.5ch white,
+    0 -0.6ch 1ch white,
+    0 0.6ch 1ch white; */
 }
 span.pink {
-  color:rgb(225,125,120);
+  /* color:rgb(225,125,120); */
+  color: white;
+  /* text-shadow: 0 -0.3ch 0.5ch white,
+    0 0.3ch 0.5ch white,
+    0 -0.6ch 1ch white,
+    0 0.6ch 1ch white; */
 }
 #container {
   position: relative;
+  padding-top: 5vw;
   font-size: var(--fontsize);
   width: var(--display-width);
   height: var(--display-height);
@@ -48,11 +57,20 @@ span.pink {
   overflow: hidden;
 }
 .scroller {
+  position: relative;
   margin: none;
   line-height: calc(var(--fontsize) * 1.8);
+  height: calc(var(--fontsize) * 1.8);
   width: var(--display-width);
   overflow: hidden;
   white-space: nowrap;
+}
+.scroll-item {
+  position: absolute;
+  white-space: pre;
+  display: inline-block;
+  box-sizing: border-box;
+  will-change: left;
 }
 #mask {
   position: absolute;

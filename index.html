@@ -23,7 +23,7 @@
     <!-- SCRIPT -->
     <script type="module">
       // CONFIG
-      import {config,createContent, startAnimation} from "./storm.js";
+      import {config, createContent, startAllAnimations} from "./storm.js";
       const wordsPerLine = 14, perWordScrollingDuration = 1100; // millis: controls speed
       const charIndexes = Array(config.numOfLines);
       // LOAD THE TEXT
@@ -63,10 +63,11 @@
         }
         // return; // DEBUG
         // Start the scrolling animation loop
+        const scrollers = [];
         for (let i = 0; i < config.numOfLines; i++) {
-          let scroller = document.getElementById('scroll' + i);
-          startAnimation(charIndexes[i], scroller, i);
+          scrollers.push(document.getElementById('scroll' + i));
         }
+        startAllAnimations(charIndexes, scrollers);
         //
         // let prevWord = char;
         // Start scrolling
