@@ -23,8 +23,9 @@
     <!-- SCRIPT -->
     <script type="module">
       // CONFIG
-      import {scrollFirstWord, spanify, getHeadWord, getNextSourceWord, longTail} from "./storm.js";
-      const numOfLines = 7, wordsPerLine = 14, perWordScrollingDuration = 1100; // millis: controls speed
+      import {config,createContent, startAnimation} from "./storm.js";
+      const wordsPerLine = 14, perWordScrollingDuration = 1100; // millis: controls speed
+      const charIndexes = Array(config.numOfLines);
       // LOAD THE TEXT
         // ==================================================
         // Downloaded on: 10/08/2025, 11:20:29 PM
@@ -39,48 +40,47 @@
         // Context Strategy: context-halving
         // Context Window Size: 48552
         // FILE: chat_history_2025-10-08T23-20-29_deepseek_typhoon_tags_contexthalving.txt
-      let generatedText = "";
-      
+      window.isAnimating = true;
+      window.animationFrames = Array(config.numOfLines).fill(null);
+      // Fetch the text file      
       fetch("./stormvoice.txt")
         .then(response => response.text())
         .then(text => {
-          generatedText = text;
-          main(generatedText);
+          config.generatedText = text.split(""); // /\s+/;
+          config.numOfChars = config.generatedText.length;
+          main();
         })
         .catch(error => console.error("Error loading stormvoice.txt:", error));
       // MAIN FUNCTION
-      let word = "";
-      async function main(generatedText) {
+      async function main() {
         console.log("Main function started");
-        generatedText = generatedText.split(/\s+/);
-        let numOfWords = generatedText.length;
-        let wordIndex = Math.floor(Math.random() * numOfWords);
-        // populate the scroll elements with words
-        for (let i = 0; i < numOfLines; i++) {
+        let charIndex = -1;
+        // populate the scroll elements with Chars
+        for (let i = 0; i < config.numOfLines; i++) {
           let elem = document.getElementById("scroll" + i);
-          let html = "";
-          for (let j = 0; j < wordsPerLine; j++) {
-            word = generatedText[wordIndex];
-            html += spanify(word);
-            wordIndex = (wordIndex + 1) % numOfWords;
-          }
-          // console.log(html); // DEBUG
-          // add the long tail to allow smoother scrolling
-          elem.innerHTML = html + longTail;
+          charIndex = createContent(charIndex, elem);
+          charIndexes[i] = charIndex;
         }
         // return; // DEBUG
-        let prevWord = word;
-        // Start scrolling
-        for (let i = numOfLines - 1; i > -1; i--) {
-          if (i === numOfLines - 1) {
-            // last line so get the next word from the text
-            scrollFirstWord(document.getElementById("scroll" + i), getNextSourceWord, prevWord, i, generatedText, wordIndex, perWordScrollingDuration);
-          } else {
-            // other lines get their next word from the line below
-            scrollFirstWord(document.getElementById("scroll" + i), getHeadWord, prevWord, i, [], wordIndex, perWordScrollingDuration);
-          }
+        // Start the scrolling animation loop
+        for (let i = 0; i < config.numOfLines; i++) {
+          let scroller = document.getElementById('scroll' + i);
+          startAnimation(charIndexes[i], scroller, i);
         }
+        //
+        // let prevWord = char;
+        // Start scrolling
+        // for (let i = numOfLines - 1; i > -1; i--) {
+        //   if (i === numOfLines - 1) {
+        //     // last line so get the next char from the text
+        //     scrollFirstWord(document.getElementById("scroll" + i), getNextSourceWord, prevWord, i, generatedText, charIndex, perWordScrollingDuration);
+        //   } else {
+        //     // other lines get their next char from the line below
+        //     scrollFirstWord(document.getElementById("scroll" + i), getHeadWord, prevWord, i, [], charIndex, perWordScrollingDuration);
+        //   }
+        // }
       }
+      // END MAIN
     </script>
   </body>
 </html>
