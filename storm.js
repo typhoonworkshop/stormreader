@@ -5,7 +5,8 @@ const config = {
   numOfLines: 7,
   isAnimating: true,
   animationFrames: Array(7).fill(null),
-  scrollSpeed: 150, // pixels per second
+  scrollSpeed: 150, // pixels per second (base speed for 100% font-size)
+  fontSizeRatios: [0.25, 0.50, 0.75, 1.0, 0.75, 0.50, 0.25], // font-size ratio per scroller
 };
 
 // newer functions
@@ -20,10 +21,9 @@ function createContent(charIndex, scroller) {
     const item = createScrollItem(config.generatedText[charIndex], left);
     scroller.append(item);
 
-    // Force layout recalculation to get accurate width
-    scroller.offsetHeight; // This forces a reflow
     // Get the actual width including margin
     const itemWidth = item.offsetWidth;
+    item.dataset.width = itemWidth; // Cache for animation
     left += itemWidth;
     currentWidth = left;
 
@@ -36,8 +36,8 @@ function createContent(charIndex, scroller) {
     const item = createScrollItem(config.generatedText[charIndex], left);
     scroller.append(item);
 
-    scroller.offsetHeight; // forces reflow
     const itemWidth = item.offsetWidth;
+    item.dataset.width = itemWidth; // Cache for animation
     left += itemWidth;
 
     console.log(`Extra char ${j + 1}: "${config.generatedText[charIndex]}", Width: ${itemWidth}px`);
@@ -50,7 +50,9 @@ function createScrollItem(char, leftPosition) {
   const item = document.createElement('span');
   item.className = "scroll-item";
   item.textContent = char;
-  item.style.left = `${leftPosition}px`;
+  item.style.transform = `translateX(${leftPosition}px)`;
+  // Cache width as data attribute to avoid layout queries during animation
+  item.dataset.width = '0'; // Will be updated after first render
   return item;
 }
 function addNewScrollItem(charIndex, scroller) {
@@ -59,8 +61,10 @@ function addNewScrollItem(charIndex, scroller) {
   let rightmostPosition = 0;
 
   scrollItems.forEach(item => {
-    const itemLeft = parseFloat(item.style.left);
-    const itemRight = itemLeft + item.offsetWidth;
+    const transform = item.style.transform;
+    const translateX = parseFloat(transform.match(/translateX\(([^)]+)px\)/)?.[1] || 0);
+    const itemWidth = parseFloat(item.dataset.width) || 0;
+    const itemRight = translateX + itemWidth;
     if (itemRight > rightmostPosition) {
       rightmostPosition = itemRight;
     }
@@ -69,8 +73,9 @@ function addNewScrollItem(charIndex, scroller) {
   const newItem = createScrollItem(config.generatedText[charIndex], rightmostPosition);
   scroller.append(newItem);
 
-  // Force reflow to get accurate width
-  scroller.offsetHeight;
+  // Cache width after appending
+  const itemWidth = newItem.offsetWidth;
+  newItem.dataset.width = itemWidth;
 
   charIndex = (charIndex + 1) % config.numOfChars;
 
@@ -82,13 +87,16 @@ function updateScroller(scroller, charIndex, distance) {
   const itemsToRemove = [];
   const scrollItems = Array.from(scroller.children);
 
+  // Batch DOM writes - use transform instead of left for GPU acceleration
   scrollItems.forEach((item, index) => {
-    const currentLeft = parseFloat(item.style.left);
-    const newLeft = currentLeft - distance; // Move left by distance
-    item.style.left = `${newLeft}px`;
+    const transform = item.style.transform;
+    const currentX = parseFloat(transform.match(/translateX\(([^)]+)px\)/)?.[1] || 0);
+    const newX = currentX - distance; // Move left by distance
+    item.style.transform = `translateX(${newX}px)`;
 
-    // Check if item is completely off the left edge
-    if (newLeft + item.offsetWidth < 0) {
+    // Check if item is completely off the left edge using cached width
+    const itemWidth = parseFloat(item.dataset.width) || 0;
+    if (newX + itemWidth < 0) {
       itemsToRemove.push(item);
     }
   });
@@ -100,25 +108,31 @@ function updateScroller(scroller, charIndex, distance) {
     charIndex = addNewScrollItem(charIndex, scroller);
   });
 
-  // Apply color highlighting
-  colorSpansByOffset(scroller);
-  
   return charIndex;
 }
 
 function startAllAnimations(charIndexes, scrollers) {
   config.isAnimating = true;
   let lastTime = performance.now();
+  let frameCount = 0;
 
   function animateAll(currentTime) {
     const deltaTime = currentTime - lastTime;
-    const distance = (deltaTime / 1000) * config.scrollSpeed;
     lastTime = currentTime;
+    frameCount++;
 
-    // Update ALL scrollers in this single frame
+    // Update ALL scrollers in this single frame with scaled speed
     scrollers.forEach((scroller, i) => {
+      // Scale distance by font-size ratio so all scrollers move at same relative speed
+      const scaledSpeed = config.scrollSpeed * config.fontSizeRatios[i];
+      const distance = (deltaTime / 1000) * scaledSpeed;
       charIndexes[i] = updateScroller(scroller, charIndexes[i], distance);
     });
+
+    // Throttle color updates to every 3rd frame to reduce layout queries
+    if (frameCount % 3 === 0) {
+      scrollers.forEach(scroller => colorSpansByOffset(scroller));
+    }
 
     // Continue animation
     if (config.isAnimating) {
@@ -241,7 +255,9 @@ function colorSpansByOffset(scrollDiv, leftRatio = 0.4, rightRatio = 0.85, highl
   const rightEdge = containerWidth * rightRatio;
   
   spans.forEach(span => {
-    const offset = span.offsetLeft;
+    // Use transform value instead of offsetLeft to avoid layout query
+    const transform = span.style.transform;
+    const offset = parseFloat(transform.match(/translateX\(([^)]+)px\)/)?.[1] || 0);
     if (offset > leftEdge && offset < rightEdge) {
       span.classList.add(highlight);
     } else {

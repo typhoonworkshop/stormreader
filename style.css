@@ -70,7 +70,8 @@ span.pink {
   white-space: pre;
   display: inline-block;
   box-sizing: border-box;
-  will-change: left;
+  will-change: transform;
+  left: 0;
 }
 #mask {
   position: absolute;
@@ -80,4 +81,24 @@ span.pink {
   height: calc(var(--display-height) - var(--mask));
   background-color: rgba(255,255,255,0);
   border: var(--border-mask) solid rgba(0, 0, 0, 1);
+}
+#scroll0 {
+  font-size: 25%;
+}
+#scroll1 {
+  font-size: 50%;
+}
+#scroll2 {
+  font-size: 75%;
+}
+#scroll3 {
+}
+#scroll4 {
+  font-size: 75%;
+}
+#scroll5 {
+  font-size: 50%;
+}
+#scroll6 {
+  font-size: 25%;
 }
