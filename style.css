@@ -59,8 +59,8 @@ span.pink {
 .scroller {
   position: relative;
   margin: none;
-  line-height: calc(var(--fontsize) * 1.8);
-  height: calc(var(--fontsize) * 1.8);
+  /* line-height: calc(var(--fontsize) * 1.5);
+  height: calc(var(--fontsize) * 1.5); */
   width: var(--display-width);
   overflow: hidden;
   white-space: nowrap;
@@ -83,22 +83,86 @@ span.pink {
   border: var(--border-mask) solid rgba(0, 0, 0, 1);
 }
 #scroll0 {
-  font-size: 25%;
+  font-size: 33%;
+  line-height: calc(var(--fontsize) * 1.5 * 0.33);
+  height: calc(var(--fontsize) * 1.5 * 0.33);
 }
 #scroll1 {
-  font-size: 50%;
+  font-size: 33%;
+  line-height: calc(var(--fontsize) * 1.5 * 0.33);
+  height: calc(var(--fontsize) * 1.5 * 0.33);
 }
 #scroll2 {
-  font-size: 75%;
+  font-size: 34%;
+  line-height: calc(var(--fontsize) * 1.5 * 0.34);
+  height: calc(var(--fontsize) * 1.5 * 0.34);
 }
 #scroll3 {
+  font-size: 36%;
+  line-height: calc(var(--fontsize) * 1.5 * 0.36);
+  height: calc(var(--fontsize) * 1.5 * 0.36);
 }
 #scroll4 {
-  font-size: 75%;
+  font-size: 38%;
+  line-height: calc(var(--fontsize) * 1.5 * 0.38);
+  height: calc(var(--fontsize) * 1.5 * 0.38);
 }
 #scroll5 {
-  font-size: 50%;
+  font-size: 40%;
+  line-height: calc(var(--fontsize) * 1.5 * 0.40);
+  height: calc(var(--fontsize) * 1.5 * 0.40);
 }
 #scroll6 {
-  font-size: 25%;
+  font-size: 50%;
+  line-height: calc(var(--fontsize) * 1.5 * 0.50);
+  height: calc(var(--fontsize) * 1.5 * 0.50);
+}
+#scroll7 {
+  font-size: 75%;
+  line-height: calc(var(--fontsize) * 1.5 * 0.75);
+  height: calc(var(--fontsize) * 1.5 * 0.75);
+}
+#scroll8 {
+  line-height: calc(var(--fontsize) * 1.5);
+  height: calc(var(--fontsize) * 1.5);
+}
+#scroll9 {
+  font-size: 75%;
+  line-height: calc(var(--fontsize) * 1.5 * 0.75);
+  height: calc(var(--fontsize) * 1.5 * 0.75);
+}
+#scroll10 {
+  font-size: 50%;
+  line-height: calc(var(--fontsize) * 1.5 * 0.50);
+  height: calc(var(--fontsize) * 1.5 * 0.50);
+}
+#scroll11 {
+  font-size: 40%;
+  line-height: calc(var(--fontsize) * 1.5 * 0.40);
+  height: calc(var(--fontsize) * 1.5 * 0.40);
+}
+#scroll12 {
+  font-size: 38%;
+  line-height: calc(var(--fontsize) * 1.5 * 0.38);
+  height: calc(var(--fontsize) * 1.5 * 0.38);
+}
+#scroll13 {
+  font-size: 36%;
+  line-height: calc(var(--fontsize) * 1.5 * 0.36);
+  height: calc(var(--fontsize) * 1.5 * 0.36);
+}
+#scroll14 {
+  font-size: 34%;
+  line-height: calc(var(--fontsize) * 1.5 * 0.34);
+  height: calc(var(--fontsize) * 1.5 * 0.34);
+}
+#scroll15 {
+  font-size: 33%;
+  line-height: calc(var(--fontsize) * 1.5 * 0.33);
+  height: calc(var(--fontsize) * 1.5 * 0.33);
+}
+#scroll16 {
+  font-size: 33%;
+  line-height: calc(var(--fontsize) * 1.5 * 0.33);
+  height: calc(var(--fontsize) * 1.5 * 0.33);
 }

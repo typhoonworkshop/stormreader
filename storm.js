@@ -2,11 +2,11 @@
 const config = {
   generatedText: "",
   numOfChars: 0,
-  numOfLines: 7,
+  numOfLines: 17,
   isAnimating: true,
-  animationFrames: Array(7).fill(null),
+  animationFrames: Array(17).fill(null),
   scrollSpeed: 150, // pixels per second (base speed for 100% font-size)
-  fontSizeRatios: [0.25, 0.50, 0.75, 1.0, 0.75, 0.50, 0.25], // font-size ratio per scroller
+  fontSizeRatios: [0.33, 0.33, 0.34, 0.36, 0.38, 0.40, 0.50, 0.75, 1.0, 0.75, 0.50, 0.40, 0.38, 0.36, 0.34, 0.33, 0.33], 
 };
 
 // newer functions
@@ -241,9 +241,9 @@ function getHeadWord(prevWord, lineNum, wordIndex) {
 
 function colorSpansByOffset(scrollDiv, leftRatio = 0.4, rightRatio = 0.85, highlight="red") {
   // Early return before any DOM queries
-  if (!["scroll2", "scroll3","scroll4"].includes(scrollDiv.id)) return;
+  if (!["scroll7", "scroll8","scroll9"].includes(scrollDiv.id)) return;
   
-  if (["scroll2", "scroll4"].includes(scrollDiv.id)) {
+  if (["scroll7", "scroll9"].includes(scrollDiv.id)) {
     leftRatio = 0.52;
     rightRatio = 0.7;
     highlight = "pink";
