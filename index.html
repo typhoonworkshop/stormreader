@@ -35,9 +35,47 @@
     <!-- SCRIPT -->
     <script type="module">
       // CONFIG
-      import {config, createContent, startAllAnimations} from "./storm.js";
+      import {config, createContent, startAllAnimations, logDebug} from "./storm.js";
       const wordsPerLine = 14, perWordScrollingDuration = 1100; // millis: controls speed
       const charIndexes = Array(config.numOfLines);
+
+      function getScrollers() {
+        const scrollers = [];
+        for (let i = 0; i < config.numOfLines; i++) {
+          scrollers.push(document.getElementById('scroll' + i));
+        }
+        return scrollers;
+      }
+
+      function getRandomStartIndexAwayFrom(currentIndex) {
+        if (config.numOfChars < 2) return 0;
+        const minDistance = Math.max(1, Math.floor(config.numOfChars * 0.2));
+        let candidate = Math.floor(Math.random() * config.numOfChars);
+
+        if (Number.isInteger(currentIndex)) {
+          let attempts = 0;
+          while (attempts < 20) {
+            const diff = Math.abs(candidate - currentIndex);
+            const wrappedDiff = Math.min(diff, config.numOfChars - diff);
+            if (wrappedDiff >= minDistance) {
+              break;
+            }
+            candidate = Math.floor(Math.random() * config.numOfChars);
+            attempts++;
+          }
+        }
+
+        return candidate;
+      }
+
+      function repopulateScrollersFromRandomPoint(scrollers, startIndex = -1) {
+        let charIndex = startIndex;
+        for (let i = 0; i < config.numOfLines; i++) {
+          scrollers[i].innerHTML = "";
+          charIndex = createContent(charIndex, scrollers[i]);
+          charIndexes[i] = charIndex;
+        }
+      }
       // LOAD THE TEXT
         // ==================================================
         // Downloaded on: 10/08/2025, 11:20:29 PM
@@ -65,21 +103,24 @@
         .catch(error => console.error("Error loading stormvoice.txt:", error));
       // MAIN FUNCTION
       async function main() {
-        console.log("Main function started");
-        let charIndex = -1;
-        // populate the scroll elements with Chars
-        for (let i = 0; i < config.numOfLines; i++) {
-          let elem = document.getElementById("scroll" + i);
-          charIndex = createContent(charIndex, elem);
-          charIndexes[i] = charIndex;
-        }
+        logDebug("Main function started");
+        const scrollers = getScrollers();
+        let lastStartIndex = null;
+
+        // Initial population starts from a random point in stormvoice.txt
+        lastStartIndex = getRandomStartIndexAwayFrom(lastStartIndex);
+        repopulateScrollersFromRandomPoint(scrollers, lastStartIndex);
         // return; // DEBUG
         // Start the scrolling animation loop
-        const scrollers = [];
-        for (let i = 0; i < config.numOfLines; i++) {
-          scrollers.push(document.getElementById('scroll' + i));
-        }
         startAllAnimations(charIndexes, scrollers);
+        logDebug(`[reset] interval: ${config.resetScrollersEverySeconds}s`);
+
+        // Periodically jump to a new random source position.
+        setInterval(() => {
+          lastStartIndex = getRandomStartIndexAwayFrom(lastStartIndex);
+          repopulateScrollersFromRandomPoint(scrollers, lastStartIndex);
+          logDebug(`[reset] jumped to index ${lastStartIndex}`);
+        }, config.resetScrollersEverySeconds * 1000);
         //
         // let prevWord = char;
         // Start scrolling

@@ -31,6 +31,10 @@ span {
   -moz-transition: color 2s ease-in-out;
   -webkit-transition: color 2s ease-in-out;
 }
+span.word {
+  /* Wrapper for word grouping - no layout impact */
+  display: contents;
+}
 span.red {
   /* color: #ff4136; */
   color: white;

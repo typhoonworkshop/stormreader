@@ -3,11 +3,19 @@ const config = {
   generatedText: "",
   numOfChars: 0,
   numOfLines: 17,
+  production: false,
+  resetScrollersEverySeconds: 10,
   isAnimating: true,
   animationFrames: Array(17).fill(null),
   scrollSpeed: 150, // pixels per second (base speed for 100% font-size)
   fontSizeRatios: [0.33, 0.33, 0.34, 0.36, 0.38, 0.40, 0.50, 0.75, 1.0, 0.75, 0.50, 0.40, 0.38, 0.36, 0.34, 0.33, 0.33], 
 };
+
+function logDebug(...args) {
+  if (!config.production) {
+    console.log(...args);
+  }
+}
 
 // newer functions
 function createContent(charIndex, scroller) {
@@ -15,11 +23,33 @@ function createContent(charIndex, scroller) {
   let left = 0;
   const targetWidth = scroller.clientWidth;
   let currentWidth = 0;
+  let currentWordSpan = null;
+  let isInWord = false;
 
   // Fill until width exceeds scroller width
   while (currentWidth < targetWidth) {
-    const item = createScrollItem(config.generatedText[charIndex], left);
-    scroller.append(item);
+    const char = config.generatedText[charIndex];
+    const isWhitespace = /\s/.test(char);
+    
+    // Check if we need to start or end a word span
+    if (!isWhitespace && !isInWord) {
+      // Start a new word span
+      currentWordSpan = document.createElement('span');
+      currentWordSpan.className = "word";
+      scroller.append(currentWordSpan);
+      isInWord = true;
+    } else if (isWhitespace && isInWord) {
+      // End the word span
+      currentWordSpan = null;
+      isInWord = false;
+    }
+
+    const item = createScrollItem(char, left);
+    if (currentWordSpan && isInWord) {
+      currentWordSpan.append(item);
+    } else {
+      scroller.append(item);
+    }
 
     // Get the actual width including margin
     const itemWidth = item.offsetWidth;
@@ -27,20 +57,37 @@ function createContent(charIndex, scroller) {
     left += itemWidth;
     currentWidth = left;
 
-    console.log(`char: "${config.generatedText[charIndex]}", Width: ${itemWidth}px, Total: ${currentWidth}px`);
+    // logDebug(`char: "${char}", Width: ${itemWidth}px, Total: ${currentWidth}px`);
     charIndex = (charIndex + 1) % config.numOfChars;
   }
 
   // Append five additional scroll items for smooth transition
   for (let j = 0; j < 5; j++) {
-    const item = createScrollItem(config.generatedText[charIndex], left);
-    scroller.append(item);
+    const char = config.generatedText[charIndex];
+    const isWhitespace = /\s/.test(char);
+    
+    if (!isWhitespace && !isInWord) {
+      currentWordSpan = document.createElement('span');
+      currentWordSpan.className = "word";
+      scroller.append(currentWordSpan);
+      isInWord = true;
+    } else if (isWhitespace && isInWord) {
+      currentWordSpan = null;
+      isInWord = false;
+    }
+
+    const item = createScrollItem(char, left);
+    if (currentWordSpan && isInWord) {
+      currentWordSpan.append(item);
+    } else {
+      scroller.append(item);
+    }
 
     const itemWidth = item.offsetWidth;
     item.dataset.width = itemWidth; // Cache for animation
     left += itemWidth;
 
-    console.log(`Extra char ${j + 1}: "${config.generatedText[charIndex]}", Width: ${itemWidth}px`);
+    // logDebug(`Extra char ${j + 1}: "${char}", Width: ${itemWidth}px`);
     charIndex = (charIndex + 1) % config.numOfChars;
   }
 
@@ -57,7 +104,7 @@ function createScrollItem(char, leftPosition) {
 }
 function addNewScrollItem(charIndex, scroller) {
   // Find the rightmost position of existing items
-  const scrollItems = Array.from(scroller.children);
+  const scrollItems = Array.from(scroller.querySelectorAll(".scroll-item"));
   let rightmostPosition = 0;
 
   scrollItems.forEach(item => {
@@ -70,8 +117,36 @@ function addNewScrollItem(charIndex, scroller) {
     }
   });
 
-  const newItem = createScrollItem(config.generatedText[charIndex], rightmostPosition);
-  scroller.append(newItem);
+  const char = config.generatedText[charIndex];
+  const isWhitespace = /\s/.test(char);
+  
+  // Determine if we should add to the last word span or create new one
+  let targetParent = scroller;
+  const children = scroller.children;
+  
+  if (children.length > 0) {
+    const lastChild = children[children.length - 1];
+    // If last child is a word span and new char is not whitespace, append to it
+    if (lastChild.classList.contains("word") && !isWhitespace) {
+      targetParent = lastChild;
+    }
+    // If last child is not a word span and new char is not whitespace, we need a new word span
+    else if (!lastChild.classList.contains("word") && !isWhitespace) {
+      const newWordSpan = document.createElement('span');
+      newWordSpan.className = "word";
+      scroller.append(newWordSpan);
+      targetParent = newWordSpan;
+    }
+  } else if (!isWhitespace) {
+    // Empty scroller, need a word span for non-whitespace
+    const newWordSpan = document.createElement('span');
+    newWordSpan.className = "word";
+    scroller.append(newWordSpan);
+    targetParent = newWordSpan;
+  }
+
+  const newItem = createScrollItem(char, rightmostPosition);
+  targetParent.append(newItem);
 
   // Cache width after appending
   const itemWidth = newItem.offsetWidth;
@@ -85,7 +160,7 @@ function addNewScrollItem(charIndex, scroller) {
 function updateScroller(scroller, charIndex, distance) {
   // Update position of each scroll item
   const itemsToRemove = [];
-  const scrollItems = Array.from(scroller.children);
+  const scrollItems = Array.from(scroller.querySelectorAll(".scroll-item"));
 
   // Batch DOM writes - use transform instead of left for GPU acceleration
   scrollItems.forEach((item, index) => {
@@ -103,7 +178,12 @@ function updateScroller(scroller, charIndex, distance) {
 
   // Remove items that are off screen and add new ones
   itemsToRemove.forEach(item => {
+    const parentSpan = item.parentElement;
     item.remove();
+    // Clean up empty word spans
+    if (parentSpan.classList.contains("word") && parentSpan.children.length === 0) {
+      parentSpan.remove();
+    }
     // Add a new item to maintain continuous flow
     charIndex = addNewScrollItem(charIndex, scroller);
   });
@@ -267,4 +347,4 @@ function colorSpansByOffset(scrollDiv, leftRatio = 0.4, rightRatio = 0.85, highl
 }
 const longTail = "<span>" + "&nbsp;".repeat(100) + "</span>";
 // export all functions and config
-export {config, createContent, startAllAnimations};
+export {config, createContent, startAllAnimations, logDebug};
