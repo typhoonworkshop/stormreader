@@ -24,6 +24,7 @@ code {
 }
 span {
   display: inline-block;
+  background-color: transparent;
   white-space: pre;
   transition: color 2s ease-in-out;
   -o-transition: color 2s ease-in-out;
@@ -54,6 +55,7 @@ span.pink {
 #container {
   position: relative;
   padding-top: 5vw;
+  background-color: transparent;
   font-size: var(--fontsize);
   width: var(--display-width);
   height: var(--display-height);
@@ -63,6 +65,7 @@ span.pink {
 .scroller {
   position: relative;
   margin: none;
+  background-color: transparent;
   /* line-height: calc(var(--fontsize) * 1.5);
   height: calc(var(--fontsize) * 1.5); */
   width: var(--display-width);
@@ -75,6 +78,7 @@ span.pink {
   display: inline-block;
   box-sizing: border-box;
   will-change: transform;
+  background-color: transparent;
   left: 0;
 }
 #mask {

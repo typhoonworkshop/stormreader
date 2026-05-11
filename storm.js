@@ -1,19 +1,45 @@
+import { RiTa } from "https://esm.sh/rita";
+
 // new
 const config = {
   generatedText: "",
   numOfChars: 0,
   numOfLines: 17,
   production: false,
-  resetScrollersEverySeconds: 10,
+  resetScrollersEverySeconds: 20,
   isAnimating: true,
   animationFrames: Array(17).fill(null),
   scrollSpeed: 150, // pixels per second (base speed for 100% font-size)
-  fontSizeRatios: [0.33, 0.33, 0.34, 0.36, 0.38, 0.40, 0.50, 0.75, 1.0, 0.75, 0.50, 0.40, 0.38, 0.36, 0.34, 0.33, 0.33], 
+  fontSizeRatios: [0.33, 0.33, 0.34, 0.36, 0.38, 0.40, 0.50, 0.75, 1.0, 0.75, 0.50, 0.40, 0.38, 0.36, 0.34, 0.33, 0.33],
+  letterOutline: {
+    enabled: false,
+    widthEm: 0.01,
+    color: "black",
+  },
+  preJumpTransition: {
+    enabled: true,
+    affectedWordRatio: 0.15, // % of visible words
+    holdMs: 7000, // keep altered words visible for ~s before the jump
+    sizeTransitionMs: 2200, // duration of the font size transition
+    largestFontScale: 1.50, // % larger than normal largest size
+    smallestFontScale: 0.75, // % smaller than normal smallest size
+    fallbackBaseFontVw: 4,
+  },
 };
 
 function logDebug(...args) {
   if (!config.production) {
     console.log(...args);
+  }
+}
+
+function applyLetterOutline(item) {
+  if (config.letterOutline.enabled) {
+    item.style.webkitTextStroke = `${config.letterOutline.widthEm}em ${config.letterOutline.color}`;
+    item.style.textStroke = `${config.letterOutline.widthEm}em ${config.letterOutline.color}`;
+  } else {
+    item.style.removeProperty("-webkit-text-stroke");
+    item.style.removeProperty("text-stroke");
   }
 }
 
@@ -98,6 +124,7 @@ function createScrollItem(char, leftPosition) {
   item.className = "scroll-item";
   item.textContent = char;
   item.style.transform = `translateX(${leftPosition}px)`;
+  applyLetterOutline(item);
   // Cache width as data attribute to avoid layout queries during animation
   item.dataset.width = '0'; // Will be updated after first render
   return item;
@@ -231,6 +258,217 @@ function stopAnimation() {
   }
 }
 
+function getBaseFontVw() {
+  const rootStyles = getComputedStyle(document.documentElement);
+  const raw = rootStyles.getPropertyValue("--fontsize").trim();
+  const parsed = parseFloat(raw);
+  if (!Number.isNaN(parsed) && raw.endsWith("vw")) {
+    return parsed;
+  }
+  return config.preJumpTransition.fallbackBaseFontVw;
+}
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function getRandomBetween(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+function getTranslateX(item) {
+  const transform = item.style.transform;
+  return parseFloat(transform.match(/translateX\(([^)]+)px\)/)?.[1] || 0);
+}
+
+function reflowScrollerItems(scroller) {
+  const scrollItems = Array.from(scroller.querySelectorAll(".scroll-item"));
+  if (scrollItems.length === 0) return;
+
+  // Preserve the current left offset of the stream while recalculating widths.
+  let currentX = getTranslateX(scrollItems[0]);
+  scrollItems.forEach(item => {
+    item.style.transform = `translateX(${currentX}px)`;
+    const itemWidth = item.offsetWidth;
+    item.dataset.width = itemWidth;
+    currentX += itemWidth;
+  });
+}
+
+function reflowScrollerSet(scrollers) {
+  scrollers.forEach(reflowScrollerItems);
+}
+
+function reflowDuringTransition(scrollers, durationMs) {
+  if (durationMs <= 0) {
+    reflowScrollerSet(scrollers);
+    return Promise.resolve();
+  }
+
+  return new Promise(resolve => {
+    const start = performance.now();
+
+    function frame(now) {
+      reflowScrollerSet(scrollers);
+
+      if (now - start < durationMs) {
+        requestAnimationFrame(frame);
+      } else {
+        reflowScrollerSet(scrollers);
+        resolve();
+      }
+    }
+
+    requestAnimationFrame(frame);
+  });
+}
+
+function pickRandomElements(list, count) {
+  const copy = [...list];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy.slice(0, count);
+}
+
+function normalizeWordToken(text) {
+  return (text || "").toLowerCase().replace(/^[^a-z']+|[^a-z']+$/g, "");
+}
+
+function getRiTaStopWordsSet() {
+  let stopWords = [];
+
+  if (Array.isArray(RiTa.STOP_WORDS)) {
+    stopWords = RiTa.STOP_WORDS;
+  } else if (Array.isArray(RiTa.stopWords)) {
+    stopWords = RiTa.stopWords;
+  } else if (typeof RiTa.stopWords === "function") {
+    stopWords = RiTa.stopWords();
+  }
+
+  if (typeof stopWords === "string") {
+    stopWords = stopWords.split(/[\s,]+/);
+  }
+
+  return new Set((stopWords || []).map(word => normalizeWordToken(String(word))));
+}
+
+async function runPreJumpWordTransition(scrollers) {
+  const transitionConfig = config.preJumpTransition;
+  if (!transitionConfig.enabled) return;
+
+  const words = scrollers.flatMap(scroller => Array.from(scroller.querySelectorAll(".word")));
+  if (words.length === 0) return;
+
+  const stopWords = getRiTaStopWordsSet();
+  const filteredWords = words.filter(word => {
+    const token = normalizeWordToken(word.textContent || "");
+    return token && !stopWords.has(token);
+  });
+
+  if (filteredWords.length === 0) return;
+
+  const ratio = Math.max(0, Math.min(1, transitionConfig.affectedWordRatio));
+  const wordsToAffect = Math.floor(filteredWords.length * ratio);
+  if (wordsToAffect < 1) return;
+
+  const selectedWords = pickRandomElements(filteredWords, wordsToAffect);
+  const scrollersToReflow = new Set();
+  const minRatio = Math.min(...config.fontSizeRatios) * transitionConfig.smallestFontScale;
+  const maxRatio = Math.max(...config.fontSizeRatios) * transitionConfig.largestFontScale;
+  const baseFontVw = getBaseFontVw();
+
+  selectedWords.forEach(word => {
+    word.dataset.preJumpOriginalFontSize = word.style.fontSize || "";
+    word.dataset.preJumpOriginalTransition = word.style.transition || "";
+    word.dataset.preJumpOriginalColor = word.style.color || "";
+    word.style.transition = `font-size ${transitionConfig.sizeTransitionMs}ms ease-in-out`;
+    const randomVw = getRandomBetween(baseFontVw * minRatio, baseFontVw * maxRatio);
+    word.style.fontSize = `${randomVw.toFixed(3)}vw`;
+    word.style.color = "white";
+
+    Array.from(word.querySelectorAll(".scroll-item")).forEach(item => {
+      item.dataset.preJumpOriginalZIndex = item.style.zIndex || "";
+      item.style.zIndex = "100";
+    });
+
+    const scroller = word.closest(".scroller");
+    if (scroller) {
+      scrollersToReflow.add(scroller);
+    }
+  });
+
+  scrollersToReflow.forEach(scroller => {
+    scroller.dataset.preJumpOriginalOverflow = scroller.style.overflow || "";
+    scroller.dataset.preJumpOriginalZIndex = scroller.style.zIndex || "";
+    scroller.style.overflow = "visible";
+    scroller.style.zIndex = "10";
+  });
+
+  const container = scrollers[0] && scrollers[0].closest("#container");
+  const containerOriginalOverflow = container ? (container.style.overflow || "") : null;
+  if (container) container.style.overflow = "visible";
+
+  await reflowDuringTransition(scrollersToReflow, transitionConfig.sizeTransitionMs);
+
+  await wait(transitionConfig.holdMs);
+
+  selectedWords.forEach(word => {
+    const originalSize = word.dataset.preJumpOriginalFontSize;
+    const originalTransition = word.dataset.preJumpOriginalTransition;
+
+    word.style.transition = originalTransition;
+    if (originalSize) {
+      word.style.fontSize = originalSize;
+    } else {
+      word.style.removeProperty("font-size");
+    }
+
+    const originalColor = word.dataset.preJumpOriginalColor;
+    if (originalColor) {
+      word.style.color = originalColor;
+    } else {
+      word.style.removeProperty("color");
+    }
+
+    delete word.dataset.preJumpOriginalFontSize;
+    delete word.dataset.preJumpOriginalTransition;
+    delete word.dataset.preJumpOriginalColor;
+
+    Array.from(word.querySelectorAll(".scroll-item")).forEach(item => {
+      const origZ = item.dataset.preJumpOriginalZIndex;
+      if (origZ) {
+        item.style.zIndex = origZ;
+      } else {
+        item.style.removeProperty("z-index");
+      }
+      delete item.dataset.preJumpOriginalZIndex;
+    });
+  });
+
+  scrollersToReflow.forEach(scroller => {
+    const origOverflow = scroller.dataset.preJumpOriginalOverflow;
+    const origZIndex = scroller.dataset.preJumpOriginalZIndex;
+    scroller.style.overflow = origOverflow || "";
+    scroller.style.zIndex = origZIndex || "";
+    if (!origOverflow) scroller.style.removeProperty("overflow");
+    if (!origZIndex) scroller.style.removeProperty("z-index");
+    delete scroller.dataset.preJumpOriginalOverflow;
+    delete scroller.dataset.preJumpOriginalZIndex;
+  });
+
+  if (container) {
+    if (containerOriginalOverflow) {
+      container.style.overflow = containerOriginalOverflow;
+    } else {
+      container.style.removeProperty("overflow");
+    }
+  }
+
+  reflowScrollerSet(scrollersToReflow);
+}
+
 // older functions
 async function scrollFirstWord(scrollContainer, wordSourceFunction, prevWord = "", lineNum, generatedText, wordIndex, duration = 1250) { // default: per word
   let spanned = "";
@@ -347,4 +585,4 @@ function colorSpansByOffset(scrollDiv, leftRatio = 0.4, rightRatio = 0.85, highl
 }
 const longTail = "<span>" + "&nbsp;".repeat(100) + "</span>";
 // export all functions and config
-export {config, createContent, startAllAnimations, logDebug};
+export {config, createContent, startAllAnimations, stopAnimation, runPreJumpWordTransition, logDebug};

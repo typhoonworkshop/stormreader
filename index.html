@@ -35,7 +35,7 @@
     <!-- SCRIPT -->
     <script type="module">
       // CONFIG
-      import {config, createContent, startAllAnimations, logDebug} from "./storm.js";
+      import {config, createContent, startAllAnimations, runPreJumpWordTransition, logDebug} from "./storm.js";
       const wordsPerLine = 14, perWordScrollingDuration = 1100; // millis: controls speed
       const charIndexes = Array(config.numOfLines);
 
@@ -106,6 +106,7 @@
         logDebug("Main function started");
         const scrollers = getScrollers();
         let lastStartIndex = null;
+        let isPreparingJump = false;
 
         // Initial population starts from a random point in stormvoice.txt
         lastStartIndex = getRandomStartIndexAwayFrom(lastStartIndex);
@@ -116,10 +117,19 @@
         logDebug(`[reset] interval: ${config.resetScrollersEverySeconds}s`);
 
         // Periodically jump to a new random source position.
-        setInterval(() => {
-          lastStartIndex = getRandomStartIndexAwayFrom(lastStartIndex);
-          repopulateScrollersFromRandomPoint(scrollers, lastStartIndex);
-          logDebug(`[reset] jumped to index ${lastStartIndex}`);
+        setInterval(async () => {
+          if (isPreparingJump) return;
+          isPreparingJump = true;
+
+          try {
+            await runPreJumpWordTransition(scrollers);
+
+            lastStartIndex = getRandomStartIndexAwayFrom(lastStartIndex);
+            repopulateScrollersFromRandomPoint(scrollers, lastStartIndex);
+            logDebug(`[reset] jumped to index ${lastStartIndex}`);
+          } finally {
+            isPreparingJump = false;
+          }
         }, config.resetScrollersEverySeconds * 1000);
         //
         // let prevWord = char;
