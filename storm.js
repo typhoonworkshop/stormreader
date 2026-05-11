@@ -6,7 +6,7 @@ const config = {
   numOfChars: 0,
   numOfLines: 17,
   production: false,
-  resetScrollersEverySeconds: 20,
+  resetScrollersEverySeconds: 17,
   isAnimating: true,
   animationFrames: Array(17).fill(null),
   scrollSpeed: 150, // pixels per second (base speed for 100% font-size)
@@ -203,6 +203,49 @@ function updateScroller(scroller, charIndex, distance) {
     }
   });
 
+  // Keep selected prejump words readable by spacing letters proportionally
+  // to their current font scale, without affecting following stream layout.
+  const activeWords = new Map();
+  scrollItems.forEach(item => {
+    const wordId = item.dataset.preJumpWordId;
+    if (!wordId) return;
+
+    const word = item.closest(".word");
+    if (!word) return;
+
+    let state = activeWords.get(wordId);
+    if (!state) {
+      const baseFontPx = parseFloat(word.dataset.preJumpBaseFontPx || "0") || 1;
+      const currentFontPx = parseFloat(getComputedStyle(item).fontSize) || baseFontPx;
+      state = {
+        scale: currentFontPx / baseFontPx,
+        anchorX: null,
+      };
+      activeWords.set(wordId, state);
+    }
+
+    if (item.dataset.preJumpWordAnchor === "1") {
+      state.anchorX = getTranslateX(item);
+    }
+  });
+
+  if (activeWords.size > 0) {
+    scrollItems.forEach(item => {
+      const wordId = item.dataset.preJumpWordId;
+      if (!wordId) return;
+
+      const state = activeWords.get(wordId);
+      if (!state || state.anchorX === null) return;
+
+      const offset = parseFloat(item.dataset.preJumpWordOffset || "0") || 0;
+      const desiredX = state.anchorX + (offset * state.scale);
+      item.style.transform = `translateX(${desiredX}px)`;
+
+      // Width changes with font-size; keep cached width in sync for culling logic.
+      item.dataset.width = item.offsetWidth;
+    });
+  }
+
   // Remove items that are off screen and add new ones
   itemsToRemove.forEach(item => {
     const parentSpan = item.parentElement;
@@ -374,15 +417,35 @@ async function runPreJumpWordTransition(scrollers) {
   if (wordsToAffect < 1) return;
 
   const selectedWords = pickRandomElements(filteredWords, wordsToAffect);
-  const scrollersToReflow = new Set();
+  const affectedScrollers = new Set();
   const minRatio = Math.min(...config.fontSizeRatios) * transitionConfig.smallestFontScale;
   const maxRatio = Math.max(...config.fontSizeRatios) * transitionConfig.largestFontScale;
   const baseFontVw = getBaseFontVw();
 
-  selectedWords.forEach(word => {
+  selectedWords.forEach((word, wordIndex) => {
+    const wordItems = Array.from(word.querySelectorAll(".scroll-item"));
+    if (wordItems.length === 0) return;
+
+    const wordId = `prejump-${Date.now()}-${wordIndex}`;
+    const anchorX = getTranslateX(wordItems[0]);
+    const baseFontPx = parseFloat(getComputedStyle(wordItems[0]).fontSize) || 1;
+
     word.dataset.preJumpOriginalFontSize = word.style.fontSize || "";
     word.dataset.preJumpOriginalTransition = word.style.transition || "";
     word.dataset.preJumpOriginalColor = word.style.color || "";
+    word.dataset.preJumpWordId = wordId;
+    word.dataset.preJumpBaseFontPx = `${baseFontPx}`;
+
+    wordItems.forEach((item, idx) => {
+      item.dataset.preJumpWordId = wordId;
+      item.dataset.preJumpWordOffset = `${getTranslateX(item) - anchorX}`;
+      if (idx === 0) {
+        item.dataset.preJumpWordAnchor = "1";
+      } else {
+        delete item.dataset.preJumpWordAnchor;
+      }
+    });
+
     word.style.transition = `font-size ${transitionConfig.sizeTransitionMs}ms ease-in-out`;
     const randomVw = getRandomBetween(baseFontVw * minRatio, baseFontVw * maxRatio);
     word.style.fontSize = `${randomVw.toFixed(3)}vw`;
@@ -395,11 +458,11 @@ async function runPreJumpWordTransition(scrollers) {
 
     const scroller = word.closest(".scroller");
     if (scroller) {
-      scrollersToReflow.add(scroller);
+      affectedScrollers.add(scroller);
     }
   });
 
-  scrollersToReflow.forEach(scroller => {
+  affectedScrollers.forEach(scroller => {
     scroller.dataset.preJumpOriginalOverflow = scroller.style.overflow || "";
     scroller.dataset.preJumpOriginalZIndex = scroller.style.zIndex || "";
     scroller.style.overflow = "visible";
@@ -409,8 +472,6 @@ async function runPreJumpWordTransition(scrollers) {
   const container = scrollers[0] && scrollers[0].closest("#container");
   const containerOriginalOverflow = container ? (container.style.overflow || "") : null;
   if (container) container.style.overflow = "visible";
-
-  await reflowDuringTransition(scrollersToReflow, transitionConfig.sizeTransitionMs);
 
   await wait(transitionConfig.holdMs);
 
@@ -435,6 +496,8 @@ async function runPreJumpWordTransition(scrollers) {
     delete word.dataset.preJumpOriginalFontSize;
     delete word.dataset.preJumpOriginalTransition;
     delete word.dataset.preJumpOriginalColor;
+    delete word.dataset.preJumpWordId;
+    delete word.dataset.preJumpBaseFontPx;
 
     Array.from(word.querySelectorAll(".scroll-item")).forEach(item => {
       const origZ = item.dataset.preJumpOriginalZIndex;
@@ -444,10 +507,13 @@ async function runPreJumpWordTransition(scrollers) {
         item.style.removeProperty("z-index");
       }
       delete item.dataset.preJumpOriginalZIndex;
+      delete item.dataset.preJumpWordId;
+      delete item.dataset.preJumpWordOffset;
+      delete item.dataset.preJumpWordAnchor;
     });
   });
 
-  scrollersToReflow.forEach(scroller => {
+  affectedScrollers.forEach(scroller => {
     const origOverflow = scroller.dataset.preJumpOriginalOverflow;
     const origZIndex = scroller.dataset.preJumpOriginalZIndex;
     scroller.style.overflow = origOverflow || "";
@@ -465,8 +531,6 @@ async function runPreJumpWordTransition(scrollers) {
       container.style.removeProperty("overflow");
     }
   }
-
-  reflowScrollerSet(scrollersToReflow);
 }
 
 // older functions
